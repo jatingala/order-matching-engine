@@ -1,22 +1,26 @@
 package com.jatin.ome.processor;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import org.springframework.stereotype.Component;
 
 import com.jatin.ome.model.BidAskBook;
 import com.jatin.ome.model.Order;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
+@Component
 public class OrderProcessor {
 	Map<String, BidAskBook> orderBooksBySymbol = new HashMap<>();
 
 	public void process(Order order) {
 		BidAskBook bidAskBook = orderBooksBySymbol.computeIfAbsent(order.getSymbol(), k -> new BidAskBook());
 		bidAskBook.match(order);
+	}
 
-		log.info(bidAskBook.getBidAskBook(5).toString());
+	public List<List<List<Object>>> getOrderBook(String symbol) {
+		BidAskBook bidAskBook = orderBooksBySymbol.computeIfAbsent(symbol, k -> new BidAskBook());
+		return bidAskBook.getBidAskBook(5);
 	}
 
 }

@@ -2,6 +2,8 @@ package com.jatin.ome.model;
 
 import java.util.function.Consumer;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import lombok.Builder;
 import lombok.Data;
 
@@ -31,6 +33,7 @@ public class Order {
 	private final String symbol;
 	private final Long createdTime;
 
+	@JsonCreator
 	public static Order newOrder(Side side, Long qty, Double price, OrderType orderType, String symbol) {
 		OrderBuilder builder = Order.builder();
 		builder.side(side);
