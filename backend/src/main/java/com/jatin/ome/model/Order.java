@@ -33,6 +33,7 @@ public class Order {
 	private final OrderStatus orderStatus;
 	private final String symbol;
 	private final Long createdTime;
+	private final Long updatedTime;
 	private final String orderId;
 
 	@JsonCreator
@@ -47,6 +48,7 @@ public class Order {
 		builder.orderStatus(OrderStatus.OPEN);
 		builder.symbol(symbol);
 		builder.createdTime(System.nanoTime());
+		builder.updatedTime(System.nanoTime());
 		builder.orderId(UUID.randomUUID().toString());
 
 		return builder.build();
@@ -64,6 +66,7 @@ public class Order {
 		builder.orderStatus(o.getOrderStatus());
 		builder.symbol(o.getSymbol());
 		builder.createdTime(o.getCreatedTime());
+		builder.updatedTime(o.getUpdatedTime());
 		builder.orderId(o.getOrderId());
 
 		for (Consumer<OrderBuilder> consumer : mutations) {
@@ -75,7 +78,7 @@ public class Order {
 
 	public static Order cancelOrder(Order o) {
 		OrderStatus status = (o.getQty() - o.getRemainingQty()) == 0 ? OrderStatus.CANCELLED : OrderStatus.PARTIALLY_CANCELLED;
-		return clone(o, ob -> ob.orderStatus(status));
+		return clone(o, ob -> ob.orderStatus(status), ob -> ob.updatedTime(System.nanoTime()));
 	}
 
 	public static Order fill(Order o, Long qty, Double price) {
@@ -86,7 +89,7 @@ public class Order {
 		Long qtyBeingFilledNow = remainingQty == 0 ? o.getRemainingQty() : qty;
 		Double avgFillPrice = ((o.getAvgFillPrice() * qtyFilledSoFar) + (qtyBeingFilledNow * price)) / (qtyFilledSoFar + qtyBeingFilledNow);
 
-		return clone(o, ob -> ob.orderStatus(status), ob -> ob.remainingQty(remainingQty), ob -> ob.avgFillPrice(avgFillPrice));
+		return clone(o, ob -> ob.orderStatus(status), ob -> ob.remainingQty(remainingQty), ob -> ob.avgFillPrice(avgFillPrice), ob -> ob.updatedTime(System.nanoTime()));
 	}
 
 }

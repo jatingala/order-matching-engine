@@ -23,19 +23,23 @@ public class BidAskBook {
 		asks.clear();
 	}
 
-	public void match(Order order) {
-		marketOrder(order);
-		limitBuyOrder(order);
-		limitSellOrder(order);
+	public List<Order> match(Order order) {
+		List<Order> orderStateUpdates = new ArrayList<>();
+		orderStateUpdates.addAll(marketOrder(order));
+		orderStateUpdates.addAll(limitBuyOrder(order));
+		orderStateUpdates.addAll(limitSellOrder(order));
+		return orderStateUpdates;
 	}
 
-	private void marketOrder(Order order) {
+	private List<Order> marketOrder(Order order) {
+		List<Order> orderStateUpdates = new ArrayList<>();
+
 		if (order.getOrderType() == Order.OrderType.MARKET) {
 			while (order.getRemainingQty() > 0) {
 				Entry<Double, NavigableMap<Long, Order>> firstEntry = (order.getSide() == Order.Side.BUY) ? asks.firstEntry() : bids.firstEntry();
 
 				if (firstEntry == null) {
-					order = Order.cancelOrder(order);
+					orderStateUpdates.add(Order.cancelOrder(order));
 					break;
 				} else {
 					Entry<Long, Order> firstEntryFirstOrderEntry = firstEntry.getValue().firstEntry();
@@ -43,8 +47,11 @@ public class BidAskBook {
 					Order orderBookOrder = firstEntryFirstOrderEntry.getValue();
 					Long remainingQty = orderBookOrder.getRemainingQty();
 
-					orderBookOrder = Order.fill(orderBookOrder, order.getRemainingQty(), order.getPrice());
+					orderBookOrder = Order.fill(orderBookOrder, order.getRemainingQty(), orderBookOrder.getPrice());
 					order = Order.fill(order, remainingQty, orderBookOrder.getPrice());
+
+					orderStateUpdates.add(orderBookOrder);
+					orderStateUpdates.add(order);
 
 					if (orderBookOrder.getRemainingQty() == 0) {
 						firstEntry.getValue().remove(firstEntryFirstOrderEntry.getKey());
@@ -60,9 +67,13 @@ public class BidAskBook {
 				}
 			}
 		}
+
+		return orderStateUpdates;
 	}
 
-	private void limitBuyOrder(Order order) {
+	private List<Order> limitBuyOrder(Order order) {
+		List<Order> orderStateUpdates = new ArrayList<>();
+
 		if (order.getOrderType() == Order.OrderType.LIMIT && order.getSide() == Order.Side.BUY) {
 			while (order.getRemainingQty() > 0) {
 				Entry<Double, NavigableMap<Long, Order>> firstEntry = asks.firstEntry();
@@ -75,26 +86,29 @@ public class BidAskBook {
 					orderBookOrder = Order.fill(orderBookOrder, order.getRemainingQty(), order.getPrice());
 					order = Order.fill(order, remainingQty, orderBookOrder.getPrice());
 
+					orderStateUpdates.add(orderBookOrder);
+					orderStateUpdates.add(order);
+
 					if (orderBookOrder.getRemainingQty() == 0) {
 						firstEntry.getValue().remove(firstEntryFirstOrderEntry.getKey());
 					} else {
 						firstEntry.getValue().put(firstEntryFirstOrderEntry.getKey(), orderBookOrder);
 					}
 
-					if (order.getSide() == Order.Side.BUY) {
-						cleanEmptyAsks();
-					} else {
-						cleanEmptyBids();
-					}
+					cleanEmptyAsks();
 				} else {
 					bids.computeIfAbsent(order.getPrice(), MAPPING_FUNCTION).put(order.getCreatedTime(), order);
 					break;
 				}
 			}
 		}
+
+		return orderStateUpdates;
 	}
 
-	private void limitSellOrder(Order order) {
+	private List<Order> limitSellOrder(Order order) {
+		List<Order> orderStateUpdates = new ArrayList<>();
+
 		if (order.getOrderType() == Order.OrderType.LIMIT && order.getSide() == Order.Side.SELL) {
 			while (order.getRemainingQty() > 0) {
 				Entry<Double, NavigableMap<Long, Order>> firstEntry = bids.firstEntry();
@@ -107,23 +121,24 @@ public class BidAskBook {
 					orderBookOrder = Order.fill(orderBookOrder, order.getRemainingQty(), order.getPrice());
 					order = Order.fill(order, remainingQty, orderBookOrder.getPrice());
 
+					orderStateUpdates.add(orderBookOrder);
+					orderStateUpdates.add(order);
+
 					if (orderBookOrder.getRemainingQty() == 0) {
 						firstEntry.getValue().remove(firstEntryFirstOrderEntry.getKey());
 					} else {
 						firstEntry.getValue().put(firstEntryFirstOrderEntry.getKey(), orderBookOrder);
 					}
 
-					if (order.getSide() == Order.Side.BUY) {
-						cleanEmptyAsks();
-					} else {
-						cleanEmptyBids();
-					}
+					cleanEmptyBids();
 				} else {
 					asks.computeIfAbsent(order.getPrice(), MAPPING_FUNCTION).put(order.getCreatedTime(), order);
 					break;
 				}
 			}
 		}
+
+		return orderStateUpdates;
 	}
 
 	// -----------------------------------------------------------------------------------------------------------
