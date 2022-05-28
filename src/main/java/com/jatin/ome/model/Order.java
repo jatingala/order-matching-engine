@@ -1,6 +1,5 @@
 package com.jatin.ome.model;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 import lombok.Builder;
@@ -32,6 +31,21 @@ public class Order {
 	private final String symbol;
 	private final Long createdTime;
 
+	public static Order newOrder(Side side, Long qty, Double price, OrderType orderType, String symbol) {
+		OrderBuilder builder = Order.builder();
+		builder.side(side);
+		builder.qty(qty);
+		builder.remainingQty(qty);
+		builder.price(price);
+		builder.avgFillPrice(0d);
+		builder.orderType(orderType);
+		builder.orderStatus(OrderStatus.OPEN);
+		builder.symbol(symbol);
+		builder.createdTime(System.nanoTime());
+
+		return builder.build();
+	}
+
 	@SafeVarargs
 	public static Order clone(Order o, Consumer<OrderBuilder>... mutations) {
 		OrderBuilder builder = Order.builder();
@@ -53,7 +67,7 @@ public class Order {
 	}
 
 	public static Order cancelOrder(Order o) {
-		OrderStatus status = (o.qty - o.remainingQty) == 0 ? OrderStatus.CANCELLED : OrderStatus.PARTIALLY_CANCELLED;
+		OrderStatus status = (o.getQty() - o.getRemainingQty()) == 0 ? OrderStatus.CANCELLED : OrderStatus.PARTIALLY_CANCELLED;
 		return clone(o, ob -> ob.orderStatus(status));
 	}
 

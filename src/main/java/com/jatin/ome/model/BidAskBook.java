@@ -27,51 +27,113 @@ public class BidAskBook {
 	}
 
 	public void match(Order order) {
-		marketBuyOrder(order);
-		marketSellOrder(order);
+		marketOrder(order);
 		limitBuyOrder(order);
 		limitSellOrder(order);
 	}
 
-	private void marketBuyOrder(Order order) {
-		if (order.getOrderType() == Order.OrderType.MARKET && order.getSide() == Order.Side.BUY) {
+	private void marketOrder(Order order) {
+		if (order.getOrderType() == Order.OrderType.MARKET) {
 			while (order.getRemainingQty() > 0) {
-				Entry<Double, NavigableMap<Long, Order>> lowestAsks = asks.firstEntry();
+				Entry<Double, NavigableMap<Long, Order>> firstEntry = (order.getSide() == Order.Side.BUY) ? asks.firstEntry() : bids.firstEntry();
 
-				if (lowestAsks == null) {
+				if (firstEntry == null) {
 					order = Order.cancelOrder(order);
 					log.info(order.toString());
 					break;
 				} else {
-					Entry<Long, Order> lowestAskOrderEntry = lowestAsks.getValue().firstEntry();
-					Order lowestAskOrder = lowestAskOrderEntry.getValue();
+					Entry<Long, Order> firstEntryFirstOrderEntry = firstEntry.getValue().firstEntry();
 
-					lowestAskOrder = Order.fill(lowestAskOrder, order.getRemainingQty(), order.getPrice());
-					order = Order.fill(order, lowestAskOrder.getRemainingQty(), lowestAskOrder.getPrice());
-					log.info(lowestAskOrder.toString());
+					Order orderBookOrder = firstEntryFirstOrderEntry.getValue();
+					Long remainingQty = orderBookOrder.getRemainingQty();
+
+					orderBookOrder = Order.fill(orderBookOrder, order.getRemainingQty(), order.getPrice());
+					order = Order.fill(order, remainingQty, orderBookOrder.getPrice());
+					log.info(orderBookOrder.toString());
 					log.info(order.toString());
 
-					if (lowestAskOrder.getRemainingQty() == 0) {
-						lowestAsks.getValue().remove(lowestAskOrderEntry.getKey());
+					if (orderBookOrder.getRemainingQty() == 0) {
+						firstEntry.getValue().remove(firstEntryFirstOrderEntry.getKey());
 					} else {
-						lowestAskOrderEntry.setValue(lowestAskOrder);
+						firstEntry.getValue().put(firstEntryFirstOrderEntry.getKey(), orderBookOrder);
 					}
-					cleanEmptyAsks();
+
+					if (order.getSide() == Order.Side.BUY) {
+						cleanEmptyAsks();
+					} else {
+						cleanEmptyBids();
+					}
 				}
 			}
 		}
 	}
 
-	private void marketSellOrder(Order order) {
-
-	}
-
 	private void limitBuyOrder(Order order) {
+		if (order.getOrderType() == Order.OrderType.LIMIT && order.getSide() == Order.Side.BUY) {
+			while (order.getRemainingQty() > 0) {
+				Entry<Double, NavigableMap<Long, Order>> firstEntry = asks.firstEntry();
 
+				if (firstEntry != null && order.getPrice() >= firstEntry.getKey()) {
+					Entry<Long, Order> firstEntryFirstOrderEntry = firstEntry.getValue().firstEntry();
+					Order orderBookOrder = firstEntryFirstOrderEntry.getValue();
+					Long remainingQty = orderBookOrder.getRemainingQty();
+
+					orderBookOrder = Order.fill(orderBookOrder, order.getRemainingQty(), order.getPrice());
+					order = Order.fill(order, remainingQty, orderBookOrder.getPrice());
+					log.info(orderBookOrder.toString());
+					log.info(order.toString());
+
+					if (orderBookOrder.getRemainingQty() == 0) {
+						firstEntry.getValue().remove(firstEntryFirstOrderEntry.getKey());
+					} else {
+						firstEntry.getValue().put(firstEntryFirstOrderEntry.getKey(), orderBookOrder);
+					}
+
+					if (order.getSide() == Order.Side.BUY) {
+						cleanEmptyAsks();
+					} else {
+						cleanEmptyBids();
+					}
+				} else {
+					bids.computeIfAbsent(order.getPrice(), MAPPING_FUNCTION).put(order.getCreatedTime(), order);
+					break;
+				}
+			}
+		}
 	}
 
 	private void limitSellOrder(Order order) {
+		if (order.getOrderType() == Order.OrderType.LIMIT && order.getSide() == Order.Side.SELL) {
+			while (order.getRemainingQty() > 0) {
+				Entry<Double, NavigableMap<Long, Order>> firstEntry = bids.firstEntry();
 
+				if (firstEntry != null && order.getPrice() <= firstEntry.getKey()) {
+					Entry<Long, Order> firstEntryFirstOrderEntry = firstEntry.getValue().firstEntry();
+					Order orderBookOrder = firstEntryFirstOrderEntry.getValue();
+					Long remainingQty = orderBookOrder.getRemainingQty();
+
+					orderBookOrder = Order.fill(orderBookOrder, order.getRemainingQty(), order.getPrice());
+					order = Order.fill(order, remainingQty, orderBookOrder.getPrice());
+					log.info(orderBookOrder.toString());
+					log.info(order.toString());
+
+					if (orderBookOrder.getRemainingQty() == 0) {
+						firstEntry.getValue().remove(firstEntryFirstOrderEntry.getKey());
+					} else {
+						firstEntry.getValue().put(firstEntryFirstOrderEntry.getKey(), orderBookOrder);
+					}
+
+					if (order.getSide() == Order.Side.BUY) {
+						cleanEmptyAsks();
+					} else {
+						cleanEmptyBids();
+					}
+				} else {
+					asks.computeIfAbsent(order.getPrice(), MAPPING_FUNCTION).put(order.getCreatedTime(), order);
+					break;
+				}
+			}
+		}
 	}
 
 	// -----------------------------------------------------------------------------------------------------------
