@@ -1,5 +1,6 @@
 package com.jatin.ome.model;
 
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -32,6 +33,7 @@ public class Order {
 	private final OrderStatus orderStatus;
 	private final String symbol;
 	private final Long createdTime;
+	private final String orderId;
 
 	@JsonCreator
 	public static Order newOrder(Side side, Long qty, Double price, OrderType orderType, String symbol) {
@@ -45,6 +47,7 @@ public class Order {
 		builder.orderStatus(OrderStatus.OPEN);
 		builder.symbol(symbol);
 		builder.createdTime(System.nanoTime());
+		builder.orderId(UUID.randomUUID().toString());
 
 		return builder.build();
 	}
@@ -52,15 +55,16 @@ public class Order {
 	@SafeVarargs
 	public static Order clone(Order o, Consumer<OrderBuilder>... mutations) {
 		OrderBuilder builder = Order.builder();
-		builder.side(o.side);
-		builder.qty(o.qty);
-		builder.remainingQty(o.remainingQty);
-		builder.price(o.price);
-		builder.avgFillPrice(o.avgFillPrice);
-		builder.orderType(o.orderType);
-		builder.orderStatus(o.orderStatus);
-		builder.symbol(o.symbol);
-		builder.createdTime(o.createdTime);
+		builder.side(o.getSide());
+		builder.qty(o.getQty());
+		builder.remainingQty(o.getRemainingQty());
+		builder.price(o.getPrice());
+		builder.avgFillPrice(o.getAvgFillPrice());
+		builder.orderType(o.getOrderType());
+		builder.orderStatus(o.getOrderStatus());
+		builder.symbol(o.getSymbol());
+		builder.createdTime(o.getCreatedTime());
+		builder.orderId(o.getOrderId());
 
 		for (Consumer<OrderBuilder> consumer : mutations) {
 			consumer.accept(builder);
@@ -77,7 +81,12 @@ public class Order {
 	public static Order fill(Order o, Long qty, Double price) {
 		Long remainingQty = qty >= o.getRemainingQty() ? 0 : (o.getRemainingQty() - qty);
 		OrderStatus status = qty >= o.getRemainingQty() ? OrderStatus.FILLED : OrderStatus.PARTIALLY_FILLED;
-		return clone(o, ob -> ob.orderStatus(status), ob -> ob.remainingQty(remainingQty));
+
+		Long qtyFilledSoFar = o.getQty() - o.getRemainingQty();
+		Long qtyBeingFilledNow = remainingQty == 0 ? o.getRemainingQty() : qty;
+		Double avgFillPrice = ((o.getAvgFillPrice() * qtyFilledSoFar) + (qtyBeingFilledNow * price)) / (qtyFilledSoFar + qtyBeingFilledNow);
+
+		return clone(o, ob -> ob.orderStatus(status), ob -> ob.remainingQty(remainingQty), ob -> ob.avgFillPrice(avgFillPrice));
 	}
 
 }

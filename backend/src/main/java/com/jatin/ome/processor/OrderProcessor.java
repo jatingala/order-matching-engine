@@ -11,7 +11,7 @@ import com.jatin.ome.model.Order;
 
 @Component
 public class OrderProcessor {
-	Map<String, BidAskBook> orderBooksBySymbol = new HashMap<>();
+	private final Map<String, BidAskBook> orderBooksBySymbol = new HashMap<>();
 
 	public void process(Order order) {
 		BidAskBook bidAskBook = orderBooksBySymbol.computeIfAbsent(order.getSymbol(), k -> new BidAskBook());

@@ -9,9 +9,6 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.function.Function;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 public class BidAskBook {
 
 	private static final Comparator<Double> BID_PRICE_COMPARATOR = (d1, d2) -> d2.compareTo(d1);
@@ -39,7 +36,6 @@ public class BidAskBook {
 
 				if (firstEntry == null) {
 					order = Order.cancelOrder(order);
-					log.info(order.toString());
 					break;
 				} else {
 					Entry<Long, Order> firstEntryFirstOrderEntry = firstEntry.getValue().firstEntry();
@@ -49,8 +45,6 @@ public class BidAskBook {
 
 					orderBookOrder = Order.fill(orderBookOrder, order.getRemainingQty(), order.getPrice());
 					order = Order.fill(order, remainingQty, orderBookOrder.getPrice());
-					log.info(orderBookOrder.toString());
-					log.info(order.toString());
 
 					if (orderBookOrder.getRemainingQty() == 0) {
 						firstEntry.getValue().remove(firstEntryFirstOrderEntry.getKey());
@@ -80,8 +74,6 @@ public class BidAskBook {
 
 					orderBookOrder = Order.fill(orderBookOrder, order.getRemainingQty(), order.getPrice());
 					order = Order.fill(order, remainingQty, orderBookOrder.getPrice());
-					log.info(orderBookOrder.toString());
-					log.info(order.toString());
 
 					if (orderBookOrder.getRemainingQty() == 0) {
 						firstEntry.getValue().remove(firstEntryFirstOrderEntry.getKey());
@@ -114,8 +106,6 @@ public class BidAskBook {
 
 					orderBookOrder = Order.fill(orderBookOrder, order.getRemainingQty(), order.getPrice());
 					order = Order.fill(order, remainingQty, orderBookOrder.getPrice());
-					log.info(orderBookOrder.toString());
-					log.info(order.toString());
 
 					if (orderBookOrder.getRemainingQty() == 0) {
 						firstEntry.getValue().remove(firstEntryFirstOrderEntry.getKey());
